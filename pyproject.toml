@@ -1,0 +1,19 @@
+[project]
+name = "todo_supabase"
+version = "0.1.0"
+description = "Учебное Android-приложение «Список задач»: Flet + Supabase, сборка APK в GitHub Actions"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "flet==1.0.5",
+    "supabase==2.29.0",
+]
+
+# Настройки `flet build`. При наличии pyproject.toml файл requirements.txt
+# игнорируется сборкой, поэтому зависимости живут здесь (см. README).
+[tool.flet]
+product = "Список задач"
+org = "com.example"
+build_number = 1
+
+[tool.flet.app]
+path = "src"
