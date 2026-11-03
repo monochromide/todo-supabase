@@ -1,0 +1,79 @@
+name: Build APK
+
+# Собирает .apk в облаке: локально ни Android SDK, ни Flutter не нужны.
+# Ключи Supabase приходят из GitHub Secrets и на этапе сборки попадают
+# в src/config.py (файл в .gitignore, в репозиторий не коммитится).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # нужно для публикации APK в Release
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v6
+
+      - name: Проверить, что секреты добавлены
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            echo "::error::Добавьте SUPABASE_URL и SUPABASE_ANON_KEY в Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+
+      - name: Синтаксическая проверка Python
+        run: python3 -m compileall -q src
+
+      - name: Сгенерировать src/config.py из секретов
+        run: |
+          cat > src/config.py <<EOF
+          SUPABASE_URL = "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_ANON_KEY = "${{ secrets.SUPABASE_ANON_KEY }}"
+          EOF
+          # Проверяем, что файл создан, но сами значения не печатаем.
+          test -s src/config.py && echo "config.py создан ($(wc -l < src/config.py) строк)"
+
+      - name: Собрать APK
+        id: build
+        uses: flet-dev/flet-build-action@v1
+        with:
+          target: apk
+          runner-python-version: "3.13"
+          bundled-python-version: "3.13"
+          build-number: ${{ github.run_number }}
+
+      - name: Выложить архив сборки артефактом
+        uses: actions/upload-artifact@v7
+        with:
+          name: todo-apk-build-${{ github.run_number }}
+          path: ${{ steps.build.outputs.archive-path }}
+          archive: false
+          if-no-files-found: error
+
+      - name: Найти файл .apk
+        id: apk
+        run: |
+          found=$(find "${{ steps.build.outputs.output-path }}" -type f -name '*.apk' | head -n 1)
+          if [ -z "$found" ]; then
+            echo "::error::В выводе сборки не найдено ни одного .apk"
+            exit 1
+          fi
+          echo "path=$found" >> "$GITHUB_OUTPUT"
+          echo "Найден: $found ($(du -h "$found" | cut -f1))"
+
+      - name: Прикрепить APK к Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" \
+            "${{ steps.apk.outputs.path }}" \
+            --title "Сборка #${{ github.run_number }}" \
+            --notes "APK собран автоматически из коммита ${{ github.sha }}.
+          Установка: скачать файл на Android и открыть (нужно разрешить установку из неизвестных источников)." \
+            --latest
