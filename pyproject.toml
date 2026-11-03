@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Учебное Android-приложение «Список задач»: Flet + Supabase, сборка APK в GitHub Actions"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "flet==1.0.5",
+    # extra [all] обязателен: в Flet 1.x CLI вынесен из основного пакета,
+    # иначе `flet --version` в окружении сборки возвращает пустоту.
+    "flet[all]==1.0.5",
     "supabase==2.29.0",
 ]
 
