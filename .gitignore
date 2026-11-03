@@ -1,0 +1,20 @@
+# Ключи Supabase не должны попадать в git: файл генерируется из GitHub Secrets
+# в CI и создаётся локально из src/config.example.py.
+src/config.py
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Сборка Flet
+build/
+dist/
+
+# ОС и редакторы
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
